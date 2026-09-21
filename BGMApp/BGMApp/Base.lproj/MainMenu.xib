@@ -17,56 +17,24 @@
             <connections>
                 <outlet property="aboutPanel" destination="Cf4-3V-gl1" id="cgo-Hw-rE2"/>
                 <outlet property="aboutPanelLicenseView" destination="LSG-PF-cl8" id="mbu-kv-Jfc"/>
-                <outlet property="appVolumeView" destination="MWB-XH-kFI" id="eFA-RN-VMC"/>
-                <outlet property="autoPauseMenuItemUnwrapped" destination="nHv-T8-1nb" id="Lie-Cx-jw6"/>
                 <outlet property="bgmMenu" destination="8AN-nh-rEe" id="UWn-BX-eLy"/>
                 <outlet property="debugLoggingMenuItemUnwrapped" destination="sc9-vO-KyP" id="Zyd-0v-0RN"/>
-                <outlet property="outputVolumeLabel" destination="wfC-C6-SLv" id="Nuf-mo-osG"/>
                 <outlet property="outputVolumeSlider" destination="9Ru-Sc-dqC" id="wv0-Md-BwF"/>
-                <outlet property="outputVolumeView" destination="JOz-H1-mj9" id="xeJ-fk-NMI"/>
-                <outlet property="systemSoundsSlider" destination="gyd-WV-2ju" id="NEe-5W-EI5"/>
-                <outlet property="systemSoundsView" destination="dBD-CE-4dw" id="4SD-Z1-akp"/>
             </connections>
         </customObject>
         <customObject id="YLy-65-1bz" customClass="NSFontManager"/>
         <menu id="8AN-nh-rEe" userLabel="BGM Menu">
             <items>
-                <menuItem title="Auto-pause Music" tag="2" id="nHv-T8-1nb">
-                    <modifierMask key="keyEquivalentModifierMask"/>
-                    <accessibility help="Enable to automatically pause your selected music player when a different app starts playing audio." identifier="Auto-pause enabled"/>
-                </menuItem>
-                <menuItem isSeparatorItem="YES" id="ZGd-Pq-YeA"/>
-                <menuItem title="Volumes" tag="3" enabled="NO" id="8PP-wA-Pae">
-                    <modifierMask key="keyEquivalentModifierMask"/>
-                </menuItem>
-                <menuItem isSeparatorItem="YES" tag="4" id="rkf-nx-H2J"/>
                 <menuItem title="Output Device" tag="5" enabled="NO" id="chk-9C-pab">
                     <modifierMask key="keyEquivalentModifierMask"/>
                 </menuItem>
                 <menuItem isSeparatorItem="YES" id="D3z-zv-JrJ"/>
-                <menuItem title="Preferences" tag="1" id="BHb-uh-9Zm">
+                <menuItem title="Input Device" tag="6" enabled="NO" id="eJ6-kL-9mN">
                     <modifierMask key="keyEquivalentModifierMask"/>
-                    <menu key="submenu" title="Preferences" id="Img-Dh-cpU">
-                        <items>
-                            <menuItem title="Auto-pause" tag="1" enabled="NO" id="2aT-t7-HGW">
-                                <modifierMask key="keyEquivalentModifierMask"/>
-                            </menuItem>
-                            <menuItem isSeparatorItem="YES" id="nb1-jq-97L"/>
-                            <menuItem title="Status Bar Icon" enabled="NO" id="CmD-ot-1wE">
-                                <modifierMask key="keyEquivalentModifierMask"/>
-                            </menuItem>
-                            <menuItem title="Background Music Logo" state="on" tag="2" id="9VF-qy-6fh">
-                                <modifierMask key="keyEquivalentModifierMask"/>
-                            </menuItem>
-                            <menuItem title="Volume Icon" tag="3" id="B47-O2-wd0">
-                                <modifierMask key="keyEquivalentModifierMask"/>
-                            </menuItem>
-                            <menuItem isSeparatorItem="YES" id="pYP-Fy-nKA"/>
-                            <menuItem title="About Background Music" tag="4" id="R45-Vo-Eto">
-                                <modifierMask key="keyEquivalentModifierMask"/>
-                            </menuItem>
-                        </items>
-                    </menu>
+                </menuItem>
+                <menuItem isSeparatorItem="YES" id="ZGd-Pq-YeA"/>
+                <menuItem title="About Background Music" tag="4" id="R45-Vo-Eto">
+                    <modifierMask key="keyEquivalentModifierMask"/>
                 </menuItem>
                 <menuItem title="Debug Logging" hidden="YES" toolTip="Log detailed messages to help diagnose bugs. Search for &quot;bgm&quot; or &quot;background music&quot; in Console.app." id="sc9-vO-KyP">
                     <modifierMask key="keyEquivalentModifierMask"/>

@@ -26,19 +26,13 @@
 
 // Local Includes
 #import "BGM_Utils.h"
-#import "BGMAppVolumes.h"
-#import "BGMAppVolumesController.h"
-#import "BGMAutoPauseMusic.h"
-#import "BGMAutoPauseMenuItem.h"
+#import "BGMAboutPanel.h"
 #import "BGMDebugLogging.h"
 #import "BGMDebugLoggingMenuItem.h"
-#import "BGMMusicPlayers.h"
+#import "BGMInputDeviceMenuSection.h"
 #import "BGMOutputDeviceMenuSection.h"
-#import "BGMOutputVolumeMenuItem.h"
-#import "BGMPreferencesMenu.h"
 #import "BGMPreferredOutputDevices.h"
 #import "BGMStatusBarItem.h"
-#import "BGMSystemSoundsVolume.h"
 #import "BGMTermination.h"
 #import "BGMUserDefaults.h"
 #import "BGMXPCListener.h"
@@ -63,12 +57,9 @@ static NSString* const kOptShowDockIcon      = @"--show-dock-icon";
     // Persistently stores user settings and data.
     BGMUserDefaults* userDefaults;
 
-    BGMAutoPauseMusic* autoPauseMusic;
-    BGMAutoPauseMenuItem* autoPauseMenuItem;
-    BGMMusicPlayers* musicPlayers;
-    BGMSystemSoundsVolume* systemSoundsVolume;
     BGMOutputDeviceMenuSection* outputDeviceMenuSection;
-    BGMPreferencesMenu* prefsMenu;
+    BGMInputDeviceMenuSection* inputDeviceMenuSection;
+    BGMAboutPanel* aboutPanelController;
     BGMDebugLoggingMenuItem* debugLoggingMenuItem;
     BGMXPCListener* xpcListener;
     BGMPreferredOutputDevices* preferredOutputDevices;
@@ -180,13 +171,6 @@ static NSString* const kOptShowDockIcon      = @"--show-dock-icon";
     BGMTermination::SetUpTerminationCleanUp(audioDevices);
 
     // Set up the rest of the UI and other external interfaces.
-    musicPlayers = [[BGMMusicPlayers alloc] initWithAudioDevices:audioDevices
-                                                    userDefaults:userDefaults];
-
-    autoPauseMusic = [[BGMAutoPauseMusic alloc] initWithAudioDevices:audioDevices
-                                                        musicPlayers:musicPlayers
-                                                        userDefaults:userDefaults];
-
     [self setUpMainMenu];
 
     xpcListener = [[BGMXPCListener alloc] initWithAudioDevices:audioDevices
@@ -243,75 +227,7 @@ static NSString* const kOptShowDockIcon      = @"--show-dock-icon";
     }
 }
 
-- (void) menuWillOpen:(NSMenu*)menu {
-    if (@available(macOS 10.16, *)) {
-        // Set menu offset and check for any active menu items
-        float menuOffset = 12.0;
-        for (NSMenuItem* menuItem in self.bgmMenu.itemArray) {
-            if (menuItem.state == NSControlStateValueOn && menuItem.indentationLevel == 0) {
-                menuOffset += 10;
-                break;
-            }
-        }
-        
-        // Align volume output device and slider
-        for (NSView* subview in self.outputVolumeView.subviews) {
-            CGRect newSubview = subview.frame;
-            newSubview.origin.x = menuOffset;
-            subview.frame = newSubview;
-        }
-
-        // Align system sounds and app volumes
-        double appIconTitleOffset = 0;
-        for (NSMenuItem* menuItem in self.bgmMenu.itemArray) {
-            if (menuItem.view.subviews.count == 7 || menuItem.view.subviews.count == 3) {
-                NSTextField* appTitle;
-                NSImageView* appIcon;
-                
-                for (NSView* subview in menuItem.view.subviews) {
-                    if (menuItem.view.subviews.count == 3) {
-                        // System sounds
-                        if ([subview isKindOfClass:[NSTextField class]]) {
-                            appTitle = (NSTextField*)subview;
-                        }
-                        if ([subview isKindOfClass:[NSImageView class]]) {
-                            appIcon = (NSImageView*)subview;
-                        }
-                    } else if (menuItem.view.subviews.count == 7) {
-                        // App volumes
-                        if ([subview isKindOfClass:[BGMAVM_AppNameLabel class]]) {
-                            appTitle = (NSTextField*)subview;
-                        }
-                        if ([subview isKindOfClass:[BGMAVM_AppIcon class]]) {
-                            appIcon = (NSImageView*)subview;
-                        }
-                    }
-                }
- 
-                if (appIconTitleOffset == 0) {
-                    appIconTitleOffset = appTitle.frame.origin.x - appIcon.frame.origin.x;
-                }
-                
-                CGRect newAppIcon = appIcon.frame;
-                newAppIcon.origin.x = menuOffset;
-                appIcon.frame = newAppIcon;
-                CGRect newAppTitle = appTitle.frame;
-                newAppTitle.origin.x = menuOffset + appIconTitleOffset;
-                appTitle.frame = newAppTitle;
-            }
-        }
-    }
-}
-
 - (void) setUpMainMenu {
-    autoPauseMenuItem =
-        [[BGMAutoPauseMenuItem alloc] initWithMenuItem:self.autoPauseMenuItemUnwrapped
-                                        autoPauseMusic:autoPauseMusic
-                                          musicPlayers:musicPlayers
-                                          userDefaults:userDefaults];
-
-    [self initVolumesMenuSection];
-
     // Output device selection.
     outputDeviceMenuSection =
             [[BGMOutputDeviceMenuSection alloc] initWithBGMMenu:self.bgmMenu
@@ -319,23 +235,22 @@ static NSString* const kOptShowDockIcon      = @"--show-dock-icon";
                                                preferredDevices:preferredOutputDevices];
     [audioDevices setOutputDeviceMenuSection:outputDeviceMenuSection];
 
-    // Preferences submenu.
-    prefsMenu = [[BGMPreferencesMenu alloc] initWithBGMMenu:self.bgmMenu
-                                               audioDevices:audioDevices
-                                               musicPlayers:musicPlayers
-                                              statusBarItem:statusBarItem
-                                                 aboutPanel:self.aboutPanel
-                                      aboutPanelLicenseView:self.aboutPanelLicenseView
-                                               userDefaults:userDefaults];
+    // Input device selection. Changes the system's default input device. Independent of BGMApp's
+    // physical output playthrough.
+    inputDeviceMenuSection = [[BGMInputDeviceMenuSection alloc] initWithBGMMenu:self.bgmMenu];
+
+    // About box. The About item lives directly in the main menu.
+    aboutPanelController = [[BGMAboutPanel alloc] initWithPanel:self.aboutPanel
+                                                   licenseView:self.aboutPanelLicenseView];
+    NSMenuItem* aboutMenuItem = [self.bgmMenu itemWithTag:kAboutMenuItemTag];
+    [aboutMenuItem setTarget:aboutPanelController];
+    [aboutMenuItem setAction:@selector(show)];
 
     // Enable/disable debug logging. Hidden unless you option-click the status bar icon.
     debugLoggingMenuItem =
         [[BGMDebugLoggingMenuItem alloc] initWithMenuItem:self.debugLoggingMenuItemUnwrapped
                                              audioDevices:audioDevices];
     [statusBarItem setDebugLoggingMenuItem:debugLoggingMenuItem];
-
-    // Handle events about the main menu. (See the NSMenuDelegate methods below.)
-    self.bgmMenu.delegate = self;
 }
 
 - (BGMUserDefaults*) createUserDefaults {
@@ -343,36 +258,6 @@ static NSString* const kOptShowDockIcon      = @"--show-dock-icon";
         [NSProcessInfo.processInfo.arguments indexOfObject:kOptNoPersistentData] == NSNotFound;
     NSUserDefaults* wrappedDefaults = persistentDefaults ? [NSUserDefaults standardUserDefaults] : nil;
     return [[BGMUserDefaults alloc] initWithDefaults:wrappedDefaults];
-}
-
-- (void) initVolumesMenuSection {
-    // Create the menu item with the (main) output volume slider.
-    BGMOutputVolumeMenuItem* outputVolume =
-            [[BGMOutputVolumeMenuItem alloc] initWithAudioDevices:audioDevices
-                                                             view:self.outputVolumeView
-                                                           slider:self.outputVolumeSlider
-                                                      deviceLabel:self.outputVolumeLabel];
-    [audioDevices setOutputVolumeMenuItem:outputVolume];
-
-    NSInteger headingIdx = [self.bgmMenu indexOfItemWithTag:kVolumesHeadingMenuItemTag];
-
-    // Add it to the main menu below the "Volumes" heading.
-    [self.bgmMenu insertItem:outputVolume atIndex:(headingIdx + 1)];
-
-    // Add the volume control for system (UI) sounds to the menu.
-    BGMAudioDevice uiSoundsDevice = [audioDevices bgmDevice].GetUISoundsBGMDeviceInstance();
-
-    systemSoundsVolume =
-        [[BGMSystemSoundsVolume alloc] initWithUISoundsDevice:uiSoundsDevice
-                                                         view:self.systemSoundsView
-                                                       slider:self.systemSoundsSlider];
-
-    [self.bgmMenu insertItem:systemSoundsVolume.menuItem atIndex:(headingIdx + 2)];
-
-    // Add the app volumes to the menu.
-    appVolumes = [[BGMAppVolumesController alloc] initWithMenu:self.bgmMenu
-                                                 appVolumeView:self.appVolumeView
-                                                  audioDevices:audioDevices];
 }
 
 - (void) applicationWillTerminate:(NSNotification*)aNotification {
@@ -529,23 +414,6 @@ exitAfterMessageDismissed:(BOOL)fatal {
     [sysPrefs activate];
 }
 
-#pragma mark NSMenuDelegate
-
-- (void) menuNeedsUpdate:(NSMenu*)menu {
-    if ([menu isEqual:self.bgmMenu]) {
-        [autoPauseMenuItem parentMenuNeedsUpdate];
-    } else {
-        DebugMsg("BGMAppDelegate::menuNeedsUpdate: Warning: unexpected menu. menu=%s", menu.description.UTF8String);
-    }
-}
-
-- (void) menu:(NSMenu*)menu willHighlightItem:(NSMenuItem* __nullable)item {
-    if ([menu isEqual:self.bgmMenu]) {
-        [autoPauseMenuItem parentMenuItemWillHighlight:item];
-    } else {
-        DebugMsg("BGMAppDelegate::menu: Warning: unexpected menu. menu=%s", menu.description.UTF8String);
-    }
-}
 @end
 
 #pragma clang assume_nonnull end

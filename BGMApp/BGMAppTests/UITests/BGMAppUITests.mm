@@ -25,7 +25,12 @@
 // Local Includes
 #import "BGM_TestUtils.h"
 #import "BGM_Types.h"
+#import "BGM_Utils.h"
+#import "BGMAudioDevice.h"
 #import "BGMBackgroundMusicDevice.h"
+
+// PublicUtility Includes
+#import "CAHALAudioSystemObject.h"
 
 // Scripting Bridge Includes
 #import "BGMApp.h"
@@ -51,8 +56,6 @@
     XCUIElement* icon;
     // The menu items in the main menu.
     XCUIElementQuery* menuItems;
-    // The Preferences menu item.
-    XCUIElement* prefs;
 }
 
 - (void) setUp {
@@ -64,7 +67,6 @@
     // Set up the app object and some convenience vars.
     app = [[XCUIApplication alloc] init];
     menuItems = app.menuBars.menuItems;
-    prefs = menuItems[@"Preferences"];
     icon = [app.menuBars childrenMatchingType:XCUIElementTypeStatusItem].element;
 
     // TODO: Make sure BGMDevice isn't set as the OS X default device before launching BGMApp.
@@ -187,85 +189,54 @@
     }
 }
 
-- (void) testSelectMusicPlayer {
-    // Select VLC as the music player.
+- (void) testSelectInputDevice {
+    CAHALAudioSystemObject audioSystem;
+
+    // Remember the default input device so we can restore it at the end of the test.
+    AudioObjectID originalInput = kAudioObjectUnknown;
+    BGM_Utils::LogAndSwallowExceptions(BGMDbgArgs, [&] {
+        originalInput = audioSystem.GetDefaultAudioDevice(/* inIsInput = */ true,
+                                                          /* inIsSystem = */ false);
+    });
+
+    // Click the icon to open the main menu.
     [icon click];
-    [prefs hover];
-    [prefs.menuItems[@"VLC"] click];
 
-    // The name of the Auto-pause menu item should change. Also check the accessibility identifier.
-    [icon click];
-    XCTAssertEqualObjects(menuItems[@"Auto-pause VLC"].identifier, @"Auto-pause enabled");
-    
-    // Select iTunes as the music player.
-    [prefs hover];
-    [prefs.menuItems[@"iTunes"] click];
+    // Get the list of input devices from the main menu.
+    // BGMInputDeviceMenuSection::createMenuItemForDevice gives every input device menu item the
+    // accessibility identifier "input-device" so we can find all of them here.
+    NSArray<XCUIElement*>* inputDeviceMenuItems =
+        [menuItems matchingIdentifier:@"input-device"].allElementsBoundByIndex;
 
-    // The name of the Auto-pause menu item should change back.
-    [icon click];
-    XCTAssert(menuItems[@"Auto-pause iTunes"].exists);
-}
+    XCTAssertGreaterThan(inputDeviceMenuItems.count, 0);
 
-- (void) testOutputVolumeSlider {
-    const AudioObjectPropertyScope scope = kAudioDevicePropertyScopeOutput;
-    const UInt32 channel = kMainChannel;
+    // Select each input device.
+    for (XCUIElement* item in inputDeviceMenuItems) {
+        [icon click];
+        [item click];
 
-    [icon click];
-    
-    XCUIElement* slider = menuItems.sliders[@"Output Volume"];
+        // The device we clicked should now be the system's default input device.
+        AudioObjectID defaultInput = kAudioObjectUnknown;
+        NSString* defaultInputName = nil;
+        BGM_Utils::LogAndSwallowExceptions(BGMDbgArgs, [&] {
+            defaultInput = audioSystem.GetDefaultAudioDevice(/* inIsInput = */ true,
+                                                             /* inIsSystem = */ false);
+            defaultInputName =
+                CFBridgingRelease(BGMAudioDevice(defaultInput).CopyName());
+        });
 
-    // Try to slide the slider all the way to the right.
-    [slider adjustToNormalizedSliderPosition:1.0f];
+        XCTAssertNotEqual(defaultInput, kAudioObjectUnknown);
+        XCTAssertEqualObjects(defaultInputName, [item title]);
+    }
 
-    // For whatever reason, XCTest usually doesn't quite make it to the position you ask for. So
-    // just check that it got close enough.
-    XCTAssertGreaterThan(slider.normalizedSliderPosition, 0.9f);
-
-    // BGMDevice's volume should be set to its max, or as close as XCTest was able to get the
-    // slider. Probably shouldn't be comparing floats for equality like this, but it's working fine
-    // so far.
-    BGMBackgroundMusicDevice bgmDevice;
-    XCTAssertEqual(slider.normalizedSliderPosition,
-                   bgmDevice.GetVolumeControlScalarValue(scope, channel));
-
-    // Try to slide the slider all the way to the left.
-    [slider adjustToNormalizedSliderPosition:0.0f];
-
-    // BGMDevice's volume should be set to the new value of the slider.
-    XCTAssertLessThan(slider.normalizedSliderPosition, 0.1f);
-    XCTAssertEqual(slider.normalizedSliderPosition,
-                   bgmDevice.GetVolumeControlScalarValue(scope, channel));
-
-    // Try to slide the slider to 75%.
-    [slider adjustToNormalizedSliderPosition:0.75f];
-
-    // BGMDevice's volume should be set to the new value of the slider, about 75% of its max.
-    XCTAssertEqual(slider.normalizedSliderPosition,
-                   bgmDevice.GetVolumeControlScalarValue(scope, channel));
-
-    // BGMDevice should be unmuted.
-    XCTAssertEqual(false, bgmDevice.GetMuteControlValue(scope, channel));
-
-    // Set BGMDevice's volume to its min.
-    bgmDevice.SetVolumeControlScalarValue(scope, channel, 0.0f);
-
-    // The slider should be set to its min value. Use a wait for this check because the change
-    // happens asynchronously.
-    [self expectationForPredicate:[NSPredicate predicateWithFormat:@"normalizedSliderPosition == 0"]
-              evaluatedWithObject:slider
-                          handler:nil];
-    [self waitForExpectationsWithTimeout:10.0 handler:nil];
-
-    XCTAssertEqual(0.0f, slider.normalizedSliderPosition);
-
-    // Click the slider without changing it to simulate the user setting the slider to zero.
-    [slider adjustToNormalizedSliderPosition:0.0f];
-
-    // BGMDevice's volume should still be set to its min.
-    XCTAssertEqual(0.0f, bgmDevice.GetVolumeControlScalarValue(scope, channel));
-
-    // BGMDevice should now be muted.
-    XCTAssertEqual(true, bgmDevice.GetMuteControlValue(scope, channel));
+    // Restore the original default input device.
+    if (originalInput != kAudioObjectUnknown) {
+        BGM_Utils::LogAndSwallowExceptions(BGMDbgArgs, [&] {
+            audioSystem.SetDefaultAudioDevice(/* inIsInput = */ true,
+                                              /* inIsSystem = */ false,
+                                              originalInput);
+        });
+    }
 }
 
 @end

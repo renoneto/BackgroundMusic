@@ -29,30 +29,30 @@
 @class BGMAudioDeviceManager;
 @class BGMAppVolumesController;
 
-// Tags for UI elements in MainMenu.xib
-static NSInteger const kVolumesHeadingMenuItemTag = 3;
+// Tag for the "About Background Music" item in MainMenu.xib.
+static NSInteger const kAboutMenuItemTag = 4;
+
+// Retained for compilation of the legacy BGMAppVolumes class, which positions per-app volume
+// rows relative to this tag. BGMAppVolumes is no longer instantiated, so the value is unused
+// at runtime.
 static NSInteger const kSeparatorBelowVolumesMenuItemTag = 4;
 
-@interface BGMAppDelegate : NSObject <NSApplicationDelegate, NSMenuDelegate>
+@interface BGMAppDelegate : NSObject <NSApplicationDelegate>
 
 @property (weak) IBOutlet NSMenu* bgmMenu;
 
-@property (weak) IBOutlet NSView* outputVolumeView;
-@property (weak) IBOutlet NSTextField* outputVolumeLabel;
+// Kept for BGMAppDelegate+AppleScript (setMainVolume:). Not shown in the menu.
 @property (weak) IBOutlet NSSlider* outputVolumeSlider;
-
-@property (weak) IBOutlet NSView* systemSoundsView;
-@property (weak) IBOutlet NSSlider* systemSoundsSlider;
-
-@property (weak) IBOutlet NSView* appVolumeView;
 
 @property (weak) IBOutlet NSPanel* aboutPanel;
 @property (unsafe_unretained) IBOutlet NSTextView* aboutPanelLicenseView;
 
-@property (weak) IBOutlet NSMenuItem* autoPauseMenuItemUnwrapped;
 @property (weak) IBOutlet NSMenuItem* debugLoggingMenuItemUnwrapped;
 
 @property (readonly) BGMAudioDeviceManager* audioDevices;
+
+// Kept for BGMAppDelegate+AppleScript (applications). Not initialised; the per-app volume menu
+// controls were intentionally removed.
 @property BGMAppVolumesController* appVolumes;
 
 @end
