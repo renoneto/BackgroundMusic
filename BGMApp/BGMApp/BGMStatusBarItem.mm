@@ -166,9 +166,12 @@ static CGFloat const kVolumeIconAdditionalVerticalPadding = 0.075;
     [volumeIcon2SoundWaves setSize:NSMakeSize(volumeIconWidth, volumeIconHeight)];
     [volumeIcon3SoundWaves setSize:NSMakeSize(volumeIconWidth, volumeIconHeight)];
 
-    // Make the icons "template images" so they get drawn colour-inverted when they're highlighted
+    // The Fermata icon is a full-colour tile. Keep it non-template so AppKit doesn't flatten it
+    // into a solid white square in the status bar.
+    [fermataIcon setTemplate:NO];
+
+    // Make the volume icons "template images" so they get drawn colour-inverted when they're highlighted
     // or the system is in dark mode.
-    [fermataIcon setTemplate:YES];
     [volumeIcon0SoundWaves setTemplate:YES];
     [volumeIcon1SoundWave setTemplate:YES];
     [volumeIcon2SoundWaves setTemplate:YES];

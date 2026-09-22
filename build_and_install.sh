@@ -837,6 +837,18 @@ if [[ "${XCODEBUILD_ACTION}" == "install" ]]; then
     # deleted easily after installing.
     sudo chown -R "$(whoami):admin" "BGMApp/build" "BGMDriver/build"
 
+    # Stop an existing app instance before restarting coreaudiod. Otherwise the app keeps
+    # stale CoreAudio object IDs and `open` below reuses the broken process.
+    if pgrep -x "Background Music" >/dev/null; then
+        echo "Stopping Background Music before restarting coreaudiod." \
+            | tee -a ${LOG_FILE}
+        osascript -e 'tell application id "com.bearisdriving.BGM.App" to quit'
+        for _ in {1..5}; do
+            pgrep -x "Background Music" >/dev/null || break
+            sleep 1
+        done
+    fi
+
     # Restart coreaudiod.
 
     echo "Restarting coreaudiod to load the virtual audio device." \

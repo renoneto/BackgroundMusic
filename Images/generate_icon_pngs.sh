@@ -30,10 +30,24 @@
 set -euo pipefail
 IFS=$'\n\t'
 
+echo Rendering FermataIcon.svg to FermataIcon.pdf
+echo ----
+# rsvg-convert renders the standalone SVG into the PDF consumed by the
+# macOS asset catalogs. Explicitly set the format because the output filename
+# alone defaults to PNG with current rsvg-convert versions.
+(set -x; rsvg-convert --format=pdf --dpi-x 400 --dpi-y 400 -o FermataIcon.pdf FermataIcon.svg)
+
+echo
 echo Copying FermataIcon.pdf into FermataIcon.imageset for the status bar icon
 echo ----
 
 (set -x; cp FermataIcon.pdf ../BGMApp/BGMApp/Images.xcassets/FermataIcon.imageset/)
+
+echo
+echo Generating README preview from FermataIcon.pdf
+echo ----
+
+(set -x; convert -density 96 FermataIcon.pdf -resize 64x64 README/FermataIcon.png)
 
 echo
 echo Generating app icon for BGMApp
@@ -73,6 +87,10 @@ mv appicon_64.png icon_32x32@2x.png
 mv appicon_32.png icon_32x32.png
 cp icon_32x32.png icon_16x16@2x.png
 mv appicon_16.png icon_16x16.png
+
+# The copied AppIcon Contents.json references appicon_* filenames that no longer
+# exist after the renames above; iconutil rejects the iconset while it is there.
+rm Contents.json
 
 cd -
 
